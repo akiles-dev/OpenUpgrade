@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <!-- employee_admin is forcecreate="0" in hr_data.xml: loading it recreates the
+    employee without name when it was deleted (NOT NULL violation on
+    resource_resource.name). Same fix as OCA/OpenUpgrade#6056 on 17.0. -->
+    <record id="employee_admin" position="replace" />
+</odoo>

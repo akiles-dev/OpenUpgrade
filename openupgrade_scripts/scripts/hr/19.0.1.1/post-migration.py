@@ -171,5 +171,10 @@ def migrate(env, version):
     fill_hr_version(env)
     hr_employee_notes(env)
     hr_employee_bank_account_ids(env)
-    openupgrade.load_data(env, "hr", "19.0.1.1/noupdate_changes.xml")
+    openupgrade.load_data(
+        env,
+        "hr",
+        "19.0.1.1/noupdate_changes.xml",
+        xml_transformation_filename="19.0.1.1/noupdate_changes-transformation.xml",
+    )
     openupgrade.delete_records_safely_by_xml_id(env, _deleted_xmlids)
