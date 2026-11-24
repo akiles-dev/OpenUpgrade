@@ -9,7 +9,8 @@ def sale_order_line_options(env):
     """
     Model sale.order.option has been replaced by optional lines on sale orders
     """
-    SaleOrderLine = env["sale.order.line"]
+    # No "Extra line with ..." chatter note on confirmed orders.
+    SaleOrderLine = env["sale.order.line"].with_context(sale_no_log_for_new_lines=True)
     env.cr.execute(
         """
         SELECT
@@ -60,7 +61,12 @@ def sale_order_line_options(env):
                     "order_id": order_id,
                     "name": name,
                     "product_id": product_id,
-                    "product_uom_qty": quantity,
+                    # In 19 an optional product is a line with no quantity
+                    # under the optional section: the customer sets one to
+                    # take it. The 17 option's quantity was only a proposal;
+                    # copying it would add the product to the order (total,
+                    # delivery and invoicing).
+                    "product_uom_qty": 0,
                     "price_unit": price_unit,
                     "sequence": sequence,
                     "product_uom_id": uom_id,
