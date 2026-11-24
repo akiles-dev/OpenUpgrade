@@ -141,6 +141,44 @@ def account_tax_original_tax_ids(env):
     )
 
 
+def fiscal_position_keep_all_taxes(env):
+    """
+    In 18, a fiscal position without tax mappings kept every tax. In 19, a
+    fiscal position without taxes keeps only the taxes of no fiscal position
+    (account.fiscal.position#map_tax). fiscal_position_tax_ids makes a tax that
+    a mapping kept (src = dest, e.g. 21% -> 21% + equivalence surcharge) a tax
+    of that position, so it disappears from the positions without mappings,
+    e.g. the domestic one, and their sales get no tax at all.
+
+    Give those positions the taxes that map to themselves only, as the 19
+    charts do (l10n_es: the domestic position lists 21% S). A tax that another
+    tax maps to (the surcharge) is left out: in the position it would be added
+    to its source tax.
+    """
+    openupgrade.logged_query(
+        env.cr,
+        """
+        INSERT INTO account_fiscal_position_account_tax_rel
+        (account_fiscal_position_id, account_tax_id)
+        SELECT fp.id, tax.id
+        FROM account_fiscal_position fp
+        JOIN account_tax tax ON tax.company_id = fp.company_id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM account_fiscal_position_tax fpt
+            WHERE fpt.position_id = fp.id)
+        AND EXISTS (
+            SELECT 1 FROM account_fiscal_position_account_tax_rel rel
+            WHERE rel.account_tax_id = tax.id)
+        AND EXISTS (
+            SELECT 1 FROM account_tax_alternatives alt
+            WHERE alt.dest_tax_id = tax.id AND alt.src_tax_id = tax.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM account_tax_alternatives alt
+            WHERE alt.dest_tax_id = tax.id AND alt.src_tax_id != tax.id)
+        """,
+    )
+
+
 def account_full_reconcile_exchange_move_id(env):
     """
     account.full.reconcile#exchange_move_id has been scrapped, link the exchange
@@ -210,5 +248,6 @@ def migrate(env, version):
     account_account_active(env)
     fiscal_position_tax_ids(env)
     account_tax_original_tax_ids(env)
+    fiscal_position_keep_all_taxes(env)
     account_full_reconcile_exchange_move_id(env)
     account_move_line_no_followup(env)
